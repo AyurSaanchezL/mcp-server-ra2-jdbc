@@ -1,18 +1,26 @@
 package com.dam.accesodatos.ra2;
 
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Service;
+
 import com.dam.accesodatos.config.DatabaseConfig;
 import com.dam.accesodatos.model.User;
 import com.dam.accesodatos.model.UserCreateDto;
 import com.dam.accesodatos.model.UserQueryDto;
 import com.dam.accesodatos.model.UserUpdateDto;
-import org.springframework.stereotype.Service;
 
-import java.sql.*;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import ch.qos.logback.core.joran.conditional.ElseAction;
 
 /**
  * Implementación del servicio JDBC para gestión de usuarios
@@ -248,12 +256,54 @@ public class DatabaseUserServiceImpl implements DatabaseUserService {
 
     @Override
     public boolean deleteUser(Long id) {
-        throw new UnsupportedOperationException("TODO: Método deleteUser() para implementar por estudiantes");
+
+        // Verifico que el usuario existe
+        User user = findUserById(id);
+        if (user == null){
+            throw new RuntimeException("No se encontró usuario con ID " + id);
+        }
+        
+        // Si existe, preparo la query
+        String sql = "DELETE from users WHERE id=?";
+
+        try(Connection con = DatabaseConfig.getConnection();
+        PreparedStatement pStatement = con.prepareStatement(sql)){
+
+            pStatement.setLong(1, id);
+
+            if (pStatement.executeUpdate() != 0){
+                return true;
+            }else{
+                throw new RuntimeException("Error: DELETE no afectó ninguna fila");
+            }
+
+        }catch (SQLException e){
+            throw new RuntimeException("Error al borrar usuario con ID "+ id +": "+e.getMessage(), e);
+        }
     }
 
     @Override
     public List<User> findAll() {
-        throw new UnsupportedOperationException("TODO: Método findAll() para implementar por estudiantes");
+        // Preparo la query
+        String sql = "SELECT * FROM users";
+
+        // Creo las variables
+        List<User> usuarios = new ArrayList<>();
+
+        try(Connection con = DatabaseConfig.getConnection();
+        PreparedStatement psmt = con.prepareStatement(sql)){
+
+            try (ResultSet rs = psmt.executeQuery()){
+                while (rs.next()){
+                    usuarios.add(mapResultSetToUser(rs));
+                }
+            }
+
+            return usuarios;
+
+        }catch (SQLException e){
+            throw new RuntimeException("Error al listar usuarios: "+e.getMessage(), e);
+        }
     }
 
     // ========== CE2.c: Advanced Queries ==========
