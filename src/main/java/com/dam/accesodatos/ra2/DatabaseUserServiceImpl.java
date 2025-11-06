@@ -9,6 +9,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -99,9 +100,38 @@ public class DatabaseUserServiceImpl implements DatabaseUserService {
         }
     }
 
+    /*
+     * CE2.a: Obtiene información sobre la conexión actual
+     *
+     * Implementación requerida:
+     * - Obtener Connection del DataSource
+     * - Usar DatabaseMetaData: conn.getMetaData()
+     * - Obtener: URL, usuario, nombre de BD, versión de driver
+     *
+     * Clases JDBC requeridas:
+     * - java.sql.Connection
+     * - java.sql.DatabaseMetaData
+     */
     @Override
     public Map<String, String> getConnectionInfo() {
-        throw new UnsupportedOperationException("TODO: Método getConnectionInfo() para implementar por estudiantes");
+
+        HashMap<String, String> connectionInfo = new HashMap<>();
+
+        try(Connection conn = DatabaseConfig.getConnection()){
+
+            DatabaseMetaData metaData = conn.getMetaData();
+
+            connectionInfo.put("url",metaData.getURL());
+            connectionInfo.put("user", metaData.getUserName());
+            connectionInfo.put("databaseProductName", metaData.getDatabaseProductName());
+            connectionInfo.put("driverName", metaData.getDriverName());
+            connectionInfo.put("driver version", metaData.getDriverVersion());
+
+        }catch(SQLException e){
+            throw new RuntimeException("Error al buscan información de la conexión: " + e.getMessage(), e);            
+        }
+
+        return connectionInfo;
     }
 
     // ========== CE2.b: CRUD Operations ==========
