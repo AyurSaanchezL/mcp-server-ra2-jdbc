@@ -21,8 +21,6 @@ import com.dam.accesodatos.model.UserCreateDto;
 import com.dam.accesodatos.model.UserQueryDto;
 import com.dam.accesodatos.model.UserUpdateDto;
 
-import ch.qos.logback.core.joran.conditional.ElseAction;
-
 /**
  * Implementación del servicio JDBC para gestión de usuarios
  *
@@ -69,10 +67,11 @@ public class DatabaseUserServiceImpl implements DatabaseUserService {
      */
     @Override
     public String testConnection() {
-        // Patrón try-with-resources: cierra automáticamente Connection, Statement, ResultSet
+        // Patrón try-with-resources: cierra automáticamente Connection, Statement,
+        // ResultSet
         try (Connection conn = DatabaseConfig.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT 1 as test, DATABASE() as db_name")) {
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery("SELECT 1 as test, DATABASE() as db_name")) {
 
             // Validar que la conexión está abierta
             if (conn.isClosed()) {
@@ -117,18 +116,18 @@ public class DatabaseUserServiceImpl implements DatabaseUserService {
 
         HashMap<String, String> connectionInfo = new HashMap<>();
 
-        try(Connection conn = DatabaseConfig.getConnection()){
+        try (Connection conn = DatabaseConfig.getConnection()) {
 
             DatabaseMetaData metaData = conn.getMetaData();
 
-            connectionInfo.put("url",metaData.getURL());
+            connectionInfo.put("url", metaData.getURL());
             connectionInfo.put("user", metaData.getUserName());
             connectionInfo.put("databaseProductName", metaData.getDatabaseProductName());
             connectionInfo.put("driverName", metaData.getDriverName());
             connectionInfo.put("driver version", metaData.getDriverVersion());
 
-        }catch(SQLException e){
-            throw new RuntimeException("Error al buscan información de la conexión: " + e.getMessage(), e);            
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al buscan información de la conexión: " + e.getMessage(), e);
         }
 
         return connectionInfo;
@@ -148,10 +147,10 @@ public class DatabaseUserServiceImpl implements DatabaseUserService {
     @Override
     public User createUser(UserCreateDto dto) {
         String sql = "INSERT INTO users (name, email, department, role, active, created_at, updated_at) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             // Setear parámetros del PreparedStatement
             // Índices empiezan en 1, no en 0
@@ -209,10 +208,10 @@ public class DatabaseUserServiceImpl implements DatabaseUserService {
     @Override
     public User findUserById(Long id) {
         String sql = "SELECT id, name, email, department, role, active, created_at, updated_at " +
-                     "FROM users WHERE id = ?";
+                "FROM users WHERE id = ?";
 
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             // Setear parámetro WHERE id = ?
             pstmt.setLong(1, id);
@@ -255,10 +254,10 @@ public class DatabaseUserServiceImpl implements DatabaseUserService {
 
         // Construir UPDATE statement
         String sql = "UPDATE users SET name = ?, email = ?, department = ?, role = ?, " +
-                     "active = ?, updated_at = ? WHERE id = ?";
+                "active = ?, updated_at = ? WHERE id = ?";
 
         try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             // Setear todos los parámetros (incluso los no modificados)
             pstmt.setString(1, existing.getName());
@@ -289,26 +288,26 @@ public class DatabaseUserServiceImpl implements DatabaseUserService {
 
         // Verifico que el usuario existe
         User user = findUserById(id);
-        if (user == null){
+        if (user == null) {
             throw new RuntimeException("No se encontró usuario con ID " + id);
         }
-        
+
         // Si existe, preparo la query
         String sql = "DELETE from users WHERE id=?";
 
-        try(Connection con = DatabaseConfig.getConnection();
-        PreparedStatement pStatement = con.prepareStatement(sql)){
+        try (Connection con = DatabaseConfig.getConnection();
+                PreparedStatement pStatement = con.prepareStatement(sql)) {
 
             pStatement.setLong(1, id);
 
-            if (pStatement.executeUpdate() != 0){
+            if (pStatement.executeUpdate() != 0) {
                 return true;
-            }else{
+            } else {
                 throw new RuntimeException("Error: DELETE no afectó ninguna fila");
             }
 
-        }catch (SQLException e){
-            throw new RuntimeException("Error al borrar usuario con ID "+ id +": "+e.getMessage(), e);
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al borrar usuario con ID " + id + ": " + e.getMessage(), e);
         }
     }
 
@@ -320,19 +319,19 @@ public class DatabaseUserServiceImpl implements DatabaseUserService {
         // Creo las variables
         List<User> usuarios = new ArrayList<>();
 
-        try(Connection con = DatabaseConfig.getConnection();
-        PreparedStatement psmt = con.prepareStatement(sql)){
+        try (Connection con = DatabaseConfig.getConnection();
+                PreparedStatement psmt = con.prepareStatement(sql)) {
 
-            try (ResultSet rs = psmt.executeQuery()){
-                while (rs.next()){
+            try (ResultSet rs = psmt.executeQuery()) {
+                while (rs.next()) {
                     usuarios.add(mapResultSetToUser(rs));
                 }
             }
 
-            return usuarios;
+            return usuarios.reversed();
 
-        }catch (SQLException e){
-            throw new RuntimeException("Error al listar usuarios: "+e.getMessage(), e);
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al listar usuarios: " + e.getMessage(), e);
         }
     }
 
@@ -340,17 +339,118 @@ public class DatabaseUserServiceImpl implements DatabaseUserService {
 
     @Override
     public List<User> findUsersByDepartment(String department) {
-        throw new UnsupportedOperationException("TODO: Método findUsersByDepartment() para implementar por estudiantes");
+        // Preparo la query
+        String sql = "SELECT * FROM users WHERE department = ?";
+
+        // Creo las variables
+        ArrayList<User> users = new ArrayList<>();
+
+        try (Connection con = DatabaseConfig.getConnection();
+                PreparedStatement pstm = con.prepareStatement(sql)) {
+
+            pstm.setString(1, department);
+
+            try (ResultSet rs = pstm.executeQuery()) {
+                while (rs.next()) {
+                    users.add(mapResultSetToUser(rs));
+                }
+            }
+
+            return users;
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al buscar usuario por departamento: " + e.getMessage(), e);
+        }
+
     }
 
     @Override
     public List<User> searchUsers(UserQueryDto query) {
-        throw new UnsupportedOperationException("TODO: Método searchUsers() para implementar por estudiantes");
+        // Preparo la query
+        StringBuilder sql = new StringBuilder("SELECT * FROM users");
+
+        // Creo las variables
+        ArrayList<User> users = new ArrayList<>();
+        List<Object> filtros = new ArrayList<>();
+        boolean hasWhereClause = false;
+
+        // Filtro: department
+        if (query.getDepartment() != null && !query.getDepartment().trim().isEmpty()) {
+            sql.append(hasWhereClause ? " AND department = ?" : " WHERE department = ?");
+            filtros.add(query.getDepartment());
+            hasWhereClause = true;
+        }
+
+        // Filtro: role
+        if (query.getRole() != null && !query.getRole().trim().isEmpty()) {
+            sql.append(hasWhereClause ? " AND" : " WHERE");
+            sql.append(" role = ?");
+            filtros.add(query.getRole());
+            hasWhereClause = true;
+        }
+
+        // Filtro: active (puede ser true o false, null significa sin filtro)
+        if (query.getActive() != null) {
+            sql.append(hasWhereClause ? " AND" : " WHERE");
+            sql.append(" active = ?");
+            filtros.add(query.getActive());
+            hasWhereClause = true;
+        }
+
+        // Ordenar por ID
+        sql.append(" ORDER BY id");
+
+        // filtro LIMIT
+        if (query.getLimit() != null && query.getLimit() > 0) {
+            sql.append(" LIMIT ?");
+            filtros.add(query.getLimit());
+        }
+
+        // filtro OFFSET
+        if (query.getOffset() != null && query.getOffset() > 0) {
+            sql.append(" OFFSET ?");
+            filtros.add(query.getOffset());
+        }
+
+        try (Connection con = DatabaseConfig.getConnection();
+                PreparedStatement pstm = con.prepareStatement(sql.toString())) {
+
+            // Preparo el pstm según los filtros introducidos
+            for (int i = 0; i < filtros.size(); i++) {
+                Object filtro = filtros.get(i);
+
+                // Si es string puede ser o departamento o rol
+                if (filtro instanceof String) {
+                    pstm.setString(i + 1, (String) filtro);
+                }
+                // Si es boolean sólo puede ser 'active'
+                else if (filtro instanceof Boolean) {
+                    pstm.setBoolean(i + 1, (Boolean) filtro);
+                }
+                // Si es int puede ser limit u offset --> IMPORTANTE tiene que ser Integer, no
+                // int
+                else if (filtro instanceof Integer) {
+                    pstm.setInt(i + 1, (Integer) filtro);
+                }
+            }
+
+            try (ResultSet rs = pstm.executeQuery()) {
+                while (rs.next()) {
+                    users.add(mapResultSetToUser(rs));
+                }
+            }
+
+            return users;
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al filtrar usuarios: " + e.getMessage(), e);
+        }
     }
 
     @Override
     public List<User> findUsersWithPagination(int offset, int limit) {
-        throw new UnsupportedOperationException("TODO: Método findUsersWithPagination() para implementar por estudiantes");
+        throw new UnsupportedOperationException(
+                "TODO: Método findUsersWithPagination() para implementar por estudiantes");
     }
 
     // ========== CE2.d: Transactions ==========
@@ -377,7 +477,7 @@ public class DatabaseUserServiceImpl implements DatabaseUserService {
             conn.setAutoCommit(false);
 
             String sql = "INSERT INTO users (name, email, department, role, active, created_at, updated_at) " +
-                         "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
             try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 // Insertar cada usuario en la transacción
@@ -449,7 +549,8 @@ public class DatabaseUserServiceImpl implements DatabaseUserService {
 
     @Override
     public int executeCountByDepartment(String department) {
-        throw new UnsupportedOperationException("TODO: Método executeCountByDepartment() para implementar por estudiantes");
+        throw new UnsupportedOperationException(
+                "TODO: Método executeCountByDepartment() para implementar por estudiantes");
     }
 
     // ========== HELPER METHODS ==========

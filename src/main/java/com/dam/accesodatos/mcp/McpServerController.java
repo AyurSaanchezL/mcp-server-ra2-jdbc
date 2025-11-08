@@ -14,7 +14,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Controlador REST que expone las herramientas MCP via HTTP para operaciones JDBC.
+ * Controlador REST que expone las herramientas MCP via HTTP para operaciones
+ * JDBC.
  *
  * Proporciona endpoints para que los LLMs puedan:
  * - Listar herramientas JDBC disponibles
@@ -180,7 +181,8 @@ public class McpServerController {
             String department = (String) request.get("department");
             String role = (String) request.get("role");
 
-            com.dam.accesodatos.model.UserUpdateDto dto = new com.dam.accesodatos.model.UserUpdateDto(name, email, department, role, true);
+            com.dam.accesodatos.model.UserUpdateDto dto = new com.dam.accesodatos.model.UserUpdateDto(name, email,
+                    department, role, true);
             User user = databaseUserService.updateUser(userId, dto);
 
             Map<String, Object> response = new HashMap<>();
@@ -283,6 +285,47 @@ public class McpServerController {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "Error buscando usuarios: " + e.getMessage());
             error.put("tool", "find_users_by_department");
+            error.put("status", "error");
+
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    /**
+     * Busca usuarios con filtros múltiples
+     */
+    @PostMapping("/search_users")
+    public ResponseEntity<Map<String, Object>> searchUsers(@RequestBody Map<String, Object> request) {
+        logger.debug("Buscando usuarios con filtros");
+
+        try {
+            // Extraer parámetros del request
+            String department = (String) request.get("department");
+            String role = (String) request.get("role");
+            Boolean active = request.get("active") != null ? Boolean.valueOf(request.get("active").toString()) : null;
+            Integer limit = request.get("limit") != null ? ((Number) request.get("limit")).intValue() : null;
+            Integer offset = request.get("offset") != null ? ((Number) request.get("offset")).intValue() : null;
+
+            // Crear DTO con los filtros
+            com.dam.accesodatos.model.UserQueryDto query = new com.dam.accesodatos.model.UserQueryDto(department, role,
+                    active, limit, offset);
+
+            // Ejecutar búsqueda
+            List<User> users = databaseUserService.searchUsers(query);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("tool", "search_users");
+            response.put("result", users);
+            response.put("count", users.size());
+            response.put("status", "success");
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error buscando usuarios con filtros", e);
+
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Error buscando usuarios: " + e.getMessage());
+            error.put("tool", "search_users");
             error.put("status", "error");
 
             return ResponseEntity.status(500).body(error);
